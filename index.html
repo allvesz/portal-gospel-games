@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Gospel Games</title>
+    <!-- Script do Google AdSense - SEU ID CONFIGURADO -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4443686547068460" crossorigin="anonymous"></script>
+    <meta name="google-adsense-account" content="ca-pub-4443686547068460">
+    <!-- Frameworks Necessários -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Ícones Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module" src="script.js"></script>
+    <script src="questions.js"></script>
+    <script src="script.js"></script>
+
+    <style>
+        body { background-color: #020617; margin: 0; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glass-effect { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .card-shadow { shadow-lg shadow-indigo-500/10; }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        .animate-glow { animation: pulse-glow 2s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function App() {
+            const [playerName, setPlayerName] = useState('');
+            const [activeScreen, setActiveScreen] = useState('setup_name');
+            const [gameState, setGameState] = useState('start'); 
+            const [gameQuestions, setGameQuestions] = useState([]);
+            const [currentQuestion, setCurrentQuestion] = useState(0);
+            const [score, setScore] = useState(0);
+            const [isAnswered, setIsAnswered] = useState(false);
+            const [selectedOption, setSelectedOption] = useState(null);
+            const [timeLeft, setTimeLeft] = useState(12);
+            const [currentMode, setCurrentMode] = useState('');
+
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [activeScreen, gameState]);
+
+            useEffect(() => {
+                let timer;
+                if (gameState === 'playing' && !isAnswered && timeLeft > 0) {
+                    timer = setInterval(() => setTimeLeft(t => t - 1), 1000);
+                } else if (timeLeft === 0 && gameState === 'playing' && !isAnswered) {
+                    handleWrongAnswer();
+                }
+                return () => clearInterval(timer);
+            }, [timeLeft, gameState, isAnswered]);
+
+            const handleWrongAnswer = () => {
+                setGameState('game_over');
+            };
+
+            const startMode = (mode) => {
+                const pool = [...questionsDB[mode]].sort(() => Math.random() - 0.5);
+                setCurrentMode(mode);
+                setGameQuestions(pool);
+                setActiveScreen('game');
+                setGameState('playing');
+                setCurrentQuestion(0);
+                setScore(0);
+                setIsAnswered(false);
+                setSelectedOption(null);
+                setTimeLeft(12);
+            };
+
+            const handleAnswer = (option) => {
+                if (isAnswered) return;
+                setSelectedOption(option);
+                setIsAnswered(true);
+                
+                if (option === gameQuestions[currentQuestion].answer) {
+                    setScore(s => s + 100 + (timeLeft * 10));
+                    setTimeout(() => {
+                        if (currentQuestion < gameQuestions.length - 1) {
+                            setCurrentQuestion(c => c + 1);
+                            setIsAnswered(false);
+                            setSelectedOption(null);
+                            setTimeLeft(12);
+                        } else {
+                            setGameState('end');
+                        }
+                    }, 1800);
+                } else {
+                    setTimeout(() => handleWrongAnswer(), 1200);
+                }
+            };
+
+            const menuItems = [
+                { id: 'Trivia', label: 'Trivia', icon: 'book-open', color: 'text-indigo-400' },
+                { id: 'Quem Disse?', label: 'Quem Disse?', icon: 'quote', color: 'text-emerald-400' },
+                { id: 'Quem Sou Eu?', label: 'Quem Sou Eu?', icon: 'user', color: 'text-amber-400' },
+                { id: 'Onde Estou?', label: 'Onde Estou?', icon: 'map-pin', color: 'text-rose-400' }
+            ];
+
+            return (
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden relative min-h-[600px] flex flex-col">
+
+                        {activeScreen === 'setup_name' && (
+                            <div className="flex-1 flex flex-col">
+                                <div className="h-44 bg-indigo-600 flex items-center justify-center relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30"></div>
+                                    <div className="bg-white/10 p-6 rounded-full backdrop-blur-md border border-white/20 animate-float">
+                                        <i data-lucide="user-circle" className="w-16 h-16 text-white"></i>
+                                    </div>
+                                </div>
+                                <div className="p-8 text-center flex-1 flex flex-col justify-center">
+                                    <h2 className="text-3xl font-black italic uppercase text-white mb-2 tracking-tighter">Bem-vindo!</h2>
+                                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-10">Como devemos te chamar no jogo?</p>
+                                    <input 
+                                        type="text"
+                                        value={playerName}
+                                        onChange={(e) => setPlayerName(e.target.value)}
+                                        placeholder="Digite seu nome..."
+                                        className="w-full bg-slate-950 border-2 border-slate-800 rounded-2xl p-5 text-center text-xl font-bold text-white focus:border-indigo-500 outline-none mb-8 transition-all"
+                                    />
+                                    <button 
+                                        onClick={() => playerName.trim() && setActiveScreen('portal')}
+                                        disabled={!playerName.trim()}
+                                        className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 font-black rounded-3xl shadow-lg italic uppercase transition-all active:scale-95"
+                                    >
+                                        Iniciar Jornada
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeScreen === 'portal' && (
+                            <div className="flex-1 flex flex-col">
+                                <div className="h-56 bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 relative flex items-center justify-center overflow-hidden">
+                                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+                                    <div className="relative z-10 text-center">
+                                        <div className="bg-white/10 p-5 rounded-full backdrop-blur-md border border-white/20 mb-3 inline-block">
+                                            <i data-lucide="sparkles" className="w-8 h-8 text-yellow-400 animate-pulse"></i>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-100">Pronto para o desafio, {playerName}?</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="p-6 -mt-12 relative z-10 flex-1 flex flex-col">
+                                    <div className="text-center mb-8">
+                                        <div className="bg-slate-900 px-8 py-5 rounded-[2.5rem] border border-slate-800 shadow-2xl inline-block ring-4 ring-slate-950">
+                                            <h1 className="text-2xl font-black italic uppercase leading-none">
+                                                Portal<br/>
+                                                <span className="text-indigo-500 tracking-tight not-italic font-sans text-lg">Gospel Games</span>
+                                            </h1>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 flex-1">
+                                        {menuItems.map((item) => (
+                                            <button 
+                                                key={item.id} 
+                                                onClick={() => startMode(item.id)} 
+                                                className="bg-slate-800/40 border border-slate-800 p-6 rounded-[2rem] flex flex-col items-center gap-3 hover:bg-slate-800 hover:scale-105 hover:border-indigo-500/50 transition-all group relative overflow-hidden shadow-lg"
+                                            >
+                                                <div className={`p-3 bg-slate-900 rounded-2xl group-hover:scale-110 transition-transform ${item.color}`}>
+                                                    <i data-lucide={item.icon}></i>
+                                                </div>
+                                                <span className="font-black italic uppercase text-[10px] tracking-widest text-slate-300">{item.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 pt-4 border-t border-slate-800/50">
+                                        <p className="text-[8px] text-slate-600 uppercase font-black tracking-widest text-center mb-3">Publicidade Patrocinada</p>
+                                        <div className="min-h-[60px] flex items-center justify-center bg-slate-950/50 rounded-2xl border border-dashed border-slate-800">
+                                            <ins className="adsbygoogle"
+                                                style={{display: 'block', width: '100%'}}
+                                                data-ad-client="ca-pub-4443686547068460"
+                                                data-ad-slot="AUTO_SLOT"
+                                                data-ad-format="horizontal"
+                                                data-full-width-responsive="true"></ins>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeScreen === 'game' && (
+                            <div className="p-6 flex-1 flex flex-col">
+                                {gameState === 'playing' ? (
+                                    <div className="flex-1 flex flex-col">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <div className="bg-slate-800/80 px-4 py-1 rounded-full border border-white/5">
+                                                <span className="text-yellow-400 font-black italic">{score} Pts</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mb-8">
+                                            <div 
+                                                className="h-full bg-indigo-500 transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(99,102,241,0.5)]" 
+                                                style={{ width: `${(timeLeft/12)*100}%` }}
+                                            ></div>
+                                        </div>
+
+                                        <div className="bg-slate-950/50 p-8 rounded-[2rem] border border-white/5 text-center min-h-[160px] flex items-center justify-center shadow-xl mb-8">
+                                            <h2 className="text-xl font-bold italic leading-tight">{gameQuestions[currentQuestion].question}</h2>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {gameQuestions[currentQuestion].options.map((opt, i) => (
+                                                <button 
+                                                    key={i} 
+                                                    onClick={() => handleAnswer(opt)} 
+                                                    disabled={isAnswered}
+                                                    className={`w-full p-5 rounded-2xl border-2 text-left font-bold transition-all text-sm flex justify-between items-center 
+                                                        ${isAnswered 
+                                                            ? (opt === gameQuestions[currentQuestion].answer 
+                                                                ? 'bg-emerald-600 border-emerald-400 translate-x-1' 
+                                                                : (opt === selectedOption ? 'bg-rose-600 border-rose-400 scale-95' : 'opacity-20 bg-slate-800')) 
+                                                            : 'bg-slate-800/50 border-slate-700 hover:border-indigo-500 active:scale-95 shadow-md hover:bg-slate-800'
+                                                        }`}
+                                                >
+                                                    {opt}
+                                                    {isAnswered && opt === gameQuestions[currentQuestion].answer && <i data-lucide="check-circle" className="w-5 h-5"></i>}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 flex-1 flex flex-col justify-center animate-in zoom-in duration-500">
+                                        <div className={`w-24 h-24 mx-auto rounded-[2.5rem] flex items-center justify-center shadow-2xl mb-8 ${gameState === 'game_over' ? 'bg-rose-600' : 'bg-yellow-500'}`}>
+                                            <i data-lucide={gameState === 'game_over' ? "x-circle" : "trophy"} className={`w-12 h-12 ${gameState === 'game_over' ? 'text-white' : 'text-slate-900'}`}></i>
+                                        </div>
+                                        
+                                        <h2 className="text-4xl font-black uppercase italic mb-6 tracking-tighter">
+                                            {gameState === 'game_over' ? 'Derrota' : 'Vitória!'}
+                                        </h2>
+
+                                        <div className="bg-slate-950/80 p-8 rounded-[2.5rem] border border-white/5 mb-8 shadow-2xl">
+                                            <span className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">Sua Pontuação</span>
+                                            <div className="text-6xl font-black text-yellow-400 mt-2 tracking-tighter">{score}</div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <button onClick={() => setActiveScreen('portal')} className="w-full py-3 text-[10px] font-black uppercase text-slate-500 hover:text-white transition-colors">
+                                                Voltar ao Portal
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4443686547068460"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-format="autorelaxed"
+     data-ad-client="ca-pub-4443686547068460"
+     data-ad-slot="5975721062"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4443686547068460"
+     crossorigin="anonymous"></script>
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-format="autorelaxed"
+     data-ad-client="ca-pub-4443686547068460"
+     data-ad-slot="8274581348"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</body>
+</html>
